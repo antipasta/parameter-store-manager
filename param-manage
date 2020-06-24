@@ -117,7 +117,7 @@ def _get_parameters(path,key):
             param = p['Name'].split('/')[-1]
             if key is not None and param != key:
                 continue
-            values[p['Name'].split('/')[-1]] = {
+            values[param] = {
                 'type': p['Type'], 
                 'value': p['Value']
             }
