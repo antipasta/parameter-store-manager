@@ -34,7 +34,8 @@ def cli():
 @click.argument('environment')
 @click.argument('application')
 @click.option('--path', default=None, help='The path prefix of the Parameter Store parameter key. (e.g. /dev/sma)')
-def edit(environment, application, path):
+@click.option('--key', default=None, help='specific key to get from path')
+def edit(environment, application, path, key):
     """
     Edit the parameters for the given Environment and Application using vim or the editor of your choice.
 
@@ -46,7 +47,7 @@ def edit(environment, application, path):
     else:
         param_path = "/{}/{}".format(environment.lower(), application.lower())
 
-    params = _get_parameters(param_path)
+    params = _get_parameters(param_path,key)
     edited_params = _edit_parameters(params, param_path)
     _save_changes(params, edited_params, param_path, kms_key_arn)
 
@@ -102,7 +103,7 @@ def _get_kms_key_arn(environment, application):
     else:
         return candidates[0]['KeyArn']
                 
-def _get_parameters(path):
+def _get_parameters(path,key):
     # we must retrieve the parameters in batches because the API won't return more than
     # 10 at a time (and we don't know how many there are).
     values = {}
@@ -113,6 +114,9 @@ def _get_parameters(path):
         params_resp = ssm.get_parameters_by_path(Path=path, WithDecryption=True, **kwargs)
 
         for p in params_resp['Parameters']:
+            param = p['Name'].split('/')[-1]
+            if key is not None and param != key:
+                continue
             values[p['Name'].split('/')[-1]] = {
                 'type': p['Type'], 
                 'value': p['Value']
@@ -131,7 +135,7 @@ def _edit_parameters(params, path):
         tf.write(EDIT_INSTRUCTIONS.strip().format(path))
         tf.write('\n\n')
         if params:
-            yaml.safe_dump(params, tf, default_flow_style = False)
+            yaml.safe_dump(params, tf, default_flow_style = False, default_style='|')
         tf.flush()
 
         # call up the editor
