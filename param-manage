@@ -146,7 +146,15 @@ def _edit_parameters(params, path):
             return 1
 
         with open(tf.name, 'r') as edited_tf:
-            return yaml.load(edited_tf)
+            loaded = yaml.load(edited_tf)
+            for k in loaded:
+                if k.endswith('.yml'):
+                    try:
+                        parsed = yaml.load(loaded[k]['value'])
+                    except Exception as err:
+                        print('Error parsing yml: {}'.format(err))
+                        sys.exit()
+            return loaded
 
 
 def _save_changes(orig_params, edited_params, path, kms_key_arn):
